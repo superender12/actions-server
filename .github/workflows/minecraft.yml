@@ -1,0 +1,51 @@
+name: Minecraft Server
+
+on:
+  workflow_dispatch:
+
+jobs:
+  minecraft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Create server directory
+        run: mkdir -p minecraft
+
+      - name: Download Minecraft server.jar
+        run: |
+          wget -O minecraft/server.jar https://launcher.mojang.com/v1/objects/fe3a063ff5e0cc0d31e9b28d4f5b37e4e84748de/server.jar
+
+      - name: Accept EULA
+        run: echo "eula=true" > minecraft/eula.txt
+
+      - name: Add default server.properties
+        run: |
+          echo "motd=Vanilla Server" > minecraft/server.properties
+          echo "gamemode=survival" >> minecraft/server.properties
+          echo "max-players=10" >> minecraft/server.properties
+          echo "online-mode=false" >> minecraft/server.properties
+
+      - name: Write playit.toml from secret
+        run: echo "${{ secrets.PLAYIT_SECRET }}" > playit.toml
+
+      - name: Download playit.gg tunnel
+        run: |
+          curl -Lo playit https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64
+          chmod +x playit
+
+      - name: Start Server
+        run: |
+          ./playit &
+          sleep 5
+          cd minecraft
+          java -Xmx1024M -Xms1024M -jar server.jar nogui
